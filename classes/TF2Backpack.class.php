@@ -64,6 +64,7 @@ class TF2Backpack {
 		}
 
 		$this->buildSchema();
+		$this->getBackpackHistory();
 		$this->getBackpack();
 	}
 
@@ -118,8 +119,8 @@ class TF2Backpack {
 		}
 	}
 
-	public function displayBackpack() {
-		if($this->getBackpack()) {
+	public function displayBackpack($timestamp = NULL) {
+		if($this->getBackpack($timestamp)) {
 			echo "<a href='{$this->getBackpackURL()}' target='backpack_{$this->steam_id}'>Backpack Source</a><br />";
 			echo "<a href='{$this->getSchemaURL()}' target='tf2_schema'>Schema Source</a><br /><br />";
 			$quests = array();
@@ -224,7 +225,10 @@ class TF2Backpack {
 		curl_close($ch);
 	}
 
-	protected function getBackpack() {
+	protected function getBackpack($timestamp = NULL) {
+		if($timestamp !== NULL && isset($this->history[$timestamp])) {
+			$this->backpack = json_decode($this->history[$timestamp], true)['result']['items'];
+		}
 		if(empty($this->backpack)) {
 			// create curl resource
 			$ch = curl_init();
@@ -282,13 +286,17 @@ class TF2Backpack {
 
 	protected function getBackpackHistory() {
 		if(empty($this->history)) {
-			$sql = "SELECT * FROM tf2_backpacks WHERE username = '{$this->username}'";
+			$sql = "SELECT * FROM tf2_backpacks WHERE username = '{$this->username}' ORDER BY timestamp LIMIT 10";
 
 			$res = $this->db->query($sql);
 			while($row = $res->fetch_assoc()) {
 				$this->history[$row['timestamp']] = $row['backpack_json'];
 			}
 		}
+	}
+
+	public function getBackpackHistoryList() {
+		return array_keys($this->history);
 	}
 
 	public function displaySchema() {

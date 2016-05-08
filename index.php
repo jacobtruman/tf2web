@@ -33,6 +33,10 @@ if(isset($_REQUEST['u'])) {
 }
 
 $backpack = new TF2Backpack($username);
+$hist = $backpack->getBackpackHistoryList();
+echo "<pre>".PHP_EOL;
+var_dump($hist);
+echo "</pre>".PHP_EOL;
 $backpack->displayBackpack();
 
 ?>
