@@ -178,7 +178,7 @@ class TF2Backpack {
 					"defindex" => $item['defindex']//,
 					//"dimensions" => true
 				);
-				echo "<a href='#' class='tooltip' id='tooltip_{$id}' title='{$title_text}'><img width='128' height='128' style='margin:2px; {$border};' src='get_image.php?p=".base64_encode(json_encode($params))."' /></a>";
+				echo "<a href='#' class='tooltip' id='tooltip_{$id}' title='{$title_text}'><img width='128' height='128' style='margin:2px; {$border};' src='/get_image.php?p=".base64_encode(json_encode($params))."' /></a>";
 			}
 			echo "<br /><br />";
 		}
@@ -226,8 +226,10 @@ class TF2Backpack {
 	}
 
 	protected function getBackpack($timestamp = NULL) {
-		if($timestamp !== NULL && isset($this->history[$timestamp])) {
-			$this->backpack = json_decode($this->history[$timestamp], true)['result']['items'];
+		if($timestamp !== NULL && $this->inHistory($timestamp)) {
+			echo "Loading backpack from history: {$timestamp}<br />".PHP_EOL;
+			$backpack_array = json_decode($this->history[$timestamp], true);
+			$this->backpack = $backpack_array['result']['items'];
 		}
 		if(empty($this->backpack)) {
 			// create curl resource
@@ -286,12 +288,52 @@ class TF2Backpack {
 
 	protected function getBackpackHistory() {
 		if(empty($this->history)) {
-			$sql = "SELECT * FROM tf2_backpacks WHERE username = '{$this->username}' ORDER BY timestamp LIMIT 10";
+			$sql = "SELECT * FROM tf2_backpacks WHERE username = '{$this->username}' ORDER BY timestamp DESC LIMIT 10";
 
 			$res = $this->db->query($sql);
 			while($row = $res->fetch_assoc()) {
 				$this->history[$row['timestamp']] = $row['backpack_json'];
 			}
+		}
+		ksort($this->history);
+	}
+
+	protected function inHistory($timestamp) {
+		if(isset($this->history[$timestamp])) {
+			return true;
+		} else {
+			$sql = "SELECT * FROM tf2_backpacks WHERE username = '{$this->username}' AND timestamp = '{$timestamp}'";
+			$res = $this->db->query($sql);
+			if($res->num_rows > 0) {
+				$row = $res->fetch_assoc();
+				$this->history[$row['timestamp']] = $row['backpack_json'];
+				ksort($this->history);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public function cleanDB() {
+		$sql = "SELECT * FROM tf2_backpacks ORDER BY username, timestamp";
+
+		$res = $this->db->query($sql);
+		$backpacks = array();
+		$deletes = array();
+		while($row = $res->fetch_assoc()) {
+			if(!isset($backpacks[$row['username']])) {
+				$backpacks[$row['username']] = array();
+			}
+			if(in_array($row['backpack_json'], $backpacks[$row['username']])) {
+				//echo "DUPLICATE: {$row['id']} :: {$row['username']} ::  {$row['timestamp']}<br />".PHP_EOL;
+				$deletes[] = "DELETE FROM tf2_backpacks WHERE id = {$row['id']} AND username = '{$row['username']}' AND timestamp = '{$row['timestamp']}'";
+			} else {
+				$backpacks[$row['username']][] = $row['backpack_json'];
+			}
+		}
+		foreach($deletes as $sql) {
+			echo "{$sql} <br />" . PHP_EOL;
+			$this->db->query($sql);
 		}
 	}
 
