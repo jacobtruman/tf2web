@@ -6,18 +6,6 @@
 	<link rel="stylesheet" href="js/jquery.mobile-1.4.5/jquery.mobile-1.4.5.min.css"/>
 
 	<script>
-		$(document).ready(function () {
-			$(".tooltip").on({
-				click: function () {
-					$.dynamic_popup({
-						content: this.title,
-						'data-position-to': '#' + this.id,
-						overlayTheme: "b"
-					});
-				}
-			});
-		});
-
 		function loadBackpack(data) {
 			$.ajax({
 				method: 'POST',

@@ -121,8 +121,21 @@ class TF2Backpack {
 
 	public function displayBackpack($timestamp = NULL) {
 		if($this->getBackpack($timestamp)) {
-			echo "<a href='{$this->getBackpackURL()}' target='backpack_{$this->steam_id}'>Backpack Source</a><br />";
-			echo "<a href='{$this->getSchemaURL()}' target='tf2_schema'>Schema Source</a><br /><br />";
+			echo '<script>
+$(document).ready(function () {
+			$(".tooltip").on({
+				click: function () {
+					$.dynamic_popup({
+						content: this.title,
+						"data-position-to": "#" + this.id,
+						overlayTheme: "b"
+					});
+				}
+			});
+		});
+		</script>'.PHP_EOL;
+			echo "<a href='{$this->getBackpackURL()}' target='backpack_{$this->steam_id}'>Backpack Source</a><br />".PHP_EOL;
+			echo "<a href='{$this->getSchemaURL()}' target='tf2_schema'>Schema Source</a><br /><br />".PHP_EOL;
 			$quests = array();
 			$new_quests = array();
 			$items_not_in_backpack = array();
