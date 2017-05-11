@@ -35,5 +35,3 @@ if(isset($params['dimensions']) && $params['dimensions'] == true && file_exists(
 	header('Content-type: image/jpeg');
 	echo $contents;
 }
-
-?>

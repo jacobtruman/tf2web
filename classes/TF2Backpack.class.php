@@ -6,9 +6,11 @@
  * Date: 4/30/16
  * Time: 1:00 PM
  */
-require_once("DBConn.class.php");
+#require_once("DBConn.class.php");
 
 class TF2Backpack {
+
+	protected $service_host = "localhost:8123/backpack";
 
 	public $steam_id;
 	public $username;
@@ -41,14 +43,14 @@ class TF2Backpack {
 	/**
 	 * @var DBConn
 	 */
-	protected $db;
+	#protected $db;
 	protected $history = array();
 
 	public function __construct($username) {
 		$this->username = $username;
 		$this->date = date("Y-m-d");
 		$this->setSchemaFile($this->date);
-		$this->db = new DBConn();
+		#$this->db = new DBConn();
 
 		$config_file = dirname(__FILE__)."/../config.json";
 
@@ -238,6 +240,27 @@ $(document).ready(function () {
 		curl_close($ch);
 	}
 
+	protected function makeCall($url, $method = "GET", $params = array()) {
+		// create curl resource
+		$ch = curl_init($url);
+
+		if($method === "POST") {
+			curl_setopt($ch, CURLOPT_POST, true);
+			curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
+		}
+
+		//return the transfer as a string
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+		// $output contains the output string
+		$output = curl_exec($ch);
+
+		// close curl resource to free up system resources
+		curl_close($ch);
+
+		return $output;
+	}
+
 	protected function getBackpack($timestamp = NULL) {
 		if($timestamp !== NULL && $this->inHistory($timestamp)) {
 			echo "Loading backpack from history: {$timestamp}<br />".PHP_EOL;
@@ -286,14 +309,12 @@ $(document).ready(function () {
 		// to flatten out the json string
 		$raw = json_encode(json_decode($this->raw, true));
 		if(!in_array($raw, $this->history)) {
-			$ts = date("Y-m-d H:i:s");
-			$sql = "INSERT INTO tf2_backpacks SET
-				username = '".$this->db->real_escape_string($this->username)."',
-				timestamp = '".$this->db->real_escape_string($ts)."',
-				backpack_json = '".$this->db->real_escape_string($raw)."'";
-			if($this->db->query($sql)) {
-				$this->history[$ts] = $this->raw;
-			}
+			$params = array(
+				"username" => $this->username,
+				#"timestamp" => date("Y-m-d H:i:s"),
+				"backpack" => $raw
+			);
+			$this->makeCall($this->service_host, "POST", $params);
 		} else {
 			// backpack state already recorded
 		}
@@ -301,11 +322,14 @@ $(document).ready(function () {
 
 	protected function getBackpackHistory() {
 		if(empty($this->history)) {
-			$sql = "SELECT * FROM tf2_backpacks WHERE username = '{$this->username}' ORDER BY timestamp DESC LIMIT 10";
-
-			$res = $this->db->query($sql);
-			while($row = $res->fetch_assoc()) {
-				$this->history[$row['timestamp']] = $row['backpack_json'];
+			$json = $this->makeCall("{$this->service_host}?username={$this->username}&limit=10");
+			if($this->isJSON($json)) {
+				$hist = json_decode($json, true);
+				foreach($hist as $backpack) {
+					$this->history[$backpack['timestamp']] = $backpack['backpack_json'];
+				}
+			} else {
+				echo "Invalid JSON returned: {$json}<br /><br />";
 			}
 		}
 		ksort($this->history);
