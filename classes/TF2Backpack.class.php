@@ -311,10 +311,9 @@ $(document).ready(function () {
 		if(!in_array($raw, $this->history)) {
 			$params = array(
 				"username" => $this->username,
-				#"timestamp" => date("Y-m-d H:i:s"),
-				"backpack" => $raw
+				"backpack_json" => $raw
 			);
-			$this->makeCall($this->service_host, "POST", $params);
+			$this->makeCall("{$this->service_host}/{$this->username}/add", "POST", $params);
 		} else {
 			// backpack state already recorded
 		}
@@ -322,11 +321,13 @@ $(document).ready(function () {
 
 	protected function getBackpackHistory() {
 		if(empty($this->history)) {
-			$json = $this->makeCall("{$this->service_host}?username={$this->username}&limit=10");
+			$json = $this->makeCall("{$this->service_host}/{$this->username}?limit=10");
 			if($this->isJSON($json)) {
 				$hist = json_decode($json, true);
-				foreach($hist as $backpack) {
-					$this->history[$backpack['timestamp']] = $backpack['backpack_json'];
+				if(isset($hist['backpacks'])) {
+					foreach($hist['backpacks'] as $backpack) {
+						$this->history[$backpack['timestamp']] = $backpack['backpack_json'];
+					}
 				}
 			} else {
 				echo "Invalid JSON returned: {$json}<br /><br />";
@@ -338,7 +339,7 @@ $(document).ready(function () {
 	protected function inHistory($timestamp) {
 		if(isset($this->history[$timestamp])) {
 			return true;
-		} else {
+		}/* else {
 			$sql = "SELECT * FROM tf2_backpacks WHERE username = '{$this->username}' AND timestamp = '{$timestamp}'";
 			$res = $this->db->query($sql);
 			if($res->num_rows > 0) {
@@ -347,7 +348,7 @@ $(document).ready(function () {
 				ksort($this->history);
 				return true;
 			}
-		}
+		}*/
 		return false;
 	}
 
